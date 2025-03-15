@@ -1,6 +1,7 @@
 from app.models.user import User
 from app.models.amenity import Amenity
 from app.models.place import Place
+from app.models.review import Review
 from app.persistence.repository import InMemoryRepository
 
 class HBnBFacade:
@@ -87,3 +88,55 @@ class HBnBFacade:
 			return None
 		place.update(place_data)
 		return place
+
+	''' REVIEW '''
+	def create_review(self, review_data):
+		user = self.user_repo.get(review_data["user_id"])
+		if not user:
+			return None, "User not found"
+
+		place = self.place_repo.get(review_data["place_id"])
+		if not place:
+			return None, "Place not found"
+
+		if not (1 <= review_data["rating"] <= 5):
+			return None, "Rating must be between 1 and 5"
+
+		review = Review(
+			text=review_data["text"],
+			rating=review_data["rating"],
+			user=user,
+			place=place
+		)
+
+		self.review_repo.add(review)
+		place.add_review(review)
+		return review, None
+
+	def get_review(self, review_id):
+		return self.review_repo.get(review_id)
+
+	def get_all_reviews(self):
+		return self.review_repo.get_all()
+
+	def get_reviews_by_place(self, place_id):
+		place = self.place_repo.get(place_id)
+		if not place:
+			return None, "Place not found"
+		return place.reviews, None
+
+	def update_review(self, review_id, review_data):
+		review = self.review_repo.get(review_id)
+		if not review:
+			return None, "Review not found"
+		review.update(review_data)
+		return review, None
+
+	def delete_review(self, review_id):
+		review = self.review_repo.get(review_id)
+		if not review:
+			return False, "Review not found"
+
+		self.review_repo.delete(review_id)
+		review.place.reviews.remove(review)
+		return True, None
